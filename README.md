@@ -1,14 +1,20 @@
-# ⚠️ Modified Fork
+# ⚠️ Modified Fork for Pinokio
 
-This fork includes a modified `main.py` to fix hallucinations and add video support.
+This fork is customized to support Video URLs, Model Switching, and UI fixes.
 
-**Changes made:**
-- **Added URL Support:** Integrated `yt-dlp` to download audio from YouTube/Video links.
-- **UI Update:** Added Tabs for "Upload File" vs "Paste URL".
-- **Controls:** Added Language Dropdown, Task Selector, and Initial Prompt.
-- **Dependencies:** Added `yt-dlp` to `pyproject.toml`.
+### 🚀 Changelog
+1.  **Integrated `yt-dlp`:**
+    -   Added a "Paste URL" tab to download audio from YouTube, TikTok, etc. automatically.
+2.  **Model Selector:**
+    -   Added dropdown to switch between `whisper-large-v3-turbo` (Fast), `whisper-large-v3` (High Quality), and `whisper-medium` (Balanced).
+    -   *Why?* The Turbo model sometimes refuses to translate; switching to Medium/Large fixes this.
+3.  **UI Improvements:**
+    -   Added **Language Dropdown** (Forces `zh` to fix hallucinations).
+    -   Added **Task Selector** (Transcribe vs Translate).
+    -   Added **Initial Prompt** input.
 
-Original README follows below:
+---
+*(Original README follows below)*
 ---
 # `mlx-whisper` Web UI
 
