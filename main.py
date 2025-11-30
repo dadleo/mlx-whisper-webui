@@ -3,17 +3,13 @@ import mlx_whisper
 import yt_dlp
 import os
 
-# Define the model
-HF_REPO = "mlx-community/whisper-turbo"
-
 def download_audio(url):
     """Download audio from a URL using yt-dlp."""
     print(f"Downloading from: {url}")
     
-    # Configure yt-dlp to download best audio and convert to mp3
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': 'downloads/%(id)s.%(ext)s',  # Save to a subfolder
+        'outtmpl': 'downloads/%(id)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -23,24 +19,20 @@ def download_audio(url):
         'no_warnings': True,
     }
     
-    # Create downloads directory if not exists
     os.makedirs("downloads", exist_ok=True)
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
-            # yt-dlp changes extension after conversion, assume mp3
             final_filename = filename.rsplit('.', 1)[0] + ".mp3"
             return final_filename
     except Exception as e:
         raise gr.Error(f"Download failed: {str(e)}")
 
-def process_audio(audio_file, url_input, language, task, initial_prompt):
-    # Determine source: File or URL?
+def process_audio(audio_file, url_input, model_id, language, task, initial_prompt):
+    # 1. Determine Input Source
     target_file = None
-    
-    # Logic: Prioritize File if both are present, or use URL
     if audio_file is not None:
         target_file = audio_file
     elif url_input and url_input.strip() != "":
@@ -48,72 +40,82 @@ def process_audio(audio_file, url_input, language, task, initial_prompt):
     else:
         return "Please upload a file OR paste a URL."
 
-    print(f"Transcribing... Lang: {language} | Task: {task}")
-
-    # Handle "Auto" language
+    # 2. Handle 'Auto' Language
     lang_param = None if language == "Auto" else language
 
+    print(f"Processing... Model: {model_id} | Lang: {lang_param} | Task: {task}")
+
     try:
+        # 3. Run Transcription
         result = mlx_whisper.transcribe(
             target_file,
-            path_or_hf_repo=HF_REPO,
+            path_or_hf_repo=model_id,
             language=lang_param,
             task=task,
             initial_prompt=initial_prompt
         )
         
-        # Optional: Cleanup the downloaded file to save space
+        # 4. Cleanup downloads
         if url_input and target_file and "downloads/" in target_file:
             if os.path.exists(target_file):
                 os.remove(target_file)
             
         return result["text"]
     except Exception as e:
-        return f"Error during transcription: {str(e)}"
+        return f"Error: {str(e)}"
 
 def build_interface():
-    with gr.Blocks(title="MLX Whisper WebUI (Video/Audio)") as demo:
-        gr.Markdown("# MLX Whisper (File & URL Support)")
-        gr.Markdown("Supports Uploads + YouTube, TikTok, X, SoundCloud, etc.")
+    with gr.Blocks(title="MLX Whisper WebUI") as demo:
+        gr.Markdown("# MLX Whisper (Advanced)")
+        gr.Markdown("Supports Video URLs and Multiple Models.")
         
         with gr.Row():
             with gr.Column():
-                # Tabs for Input Source
+                # Tabs
                 with gr.Tab("Upload File"):
-                    audio_input = gr.Audio(type="filepath", label="Upload Audio/Video File")
-                
+                    audio_input = gr.Audio(type="filepath", label="Upload Audio/Video")
                 with gr.Tab("Paste URL"):
-                    url_input = gr.Textbox(
-                        label="Video URL", 
-                        placeholder="https://www.youtube.com/watch?v=..."
-                    )
+                    url_input = gr.Textbox(label="Video URL", placeholder="YouTube, TikTok, X...")
 
-                # Settings
+                # --- CORRECTED MODEL NAMES HERE ---
+                model_input = gr.Dropdown(
+                    choices=[
+                        "mlx-community/whisper-large-v3-turbo", 
+                        "mlx-community/whisper-large-v3-mlx",   # Fixed
+                        "mlx-community/whisper-medium-mlx",     # Fixed
+                        "mlx-community/whisper-base-mlx"        # Fixed
+                    ],
+                    value="mlx-community/whisper-large-v3-turbo",
+                    label="Model Selection (Try 'Medium' if Translate fails)"
+                )
+
+                # Language Controls
                 language_input = gr.Dropdown(
                     choices=["Auto", "zh", "en", "ja", "ko", "es", "fr", "de"], 
                     value="zh", 
-                    label="Language (Force 'zh' for Chinese)"
+                    label="Source Language (Force 'zh' for Chinese)"
                 )
+                
+                # Task Controls
                 task_input = gr.Radio(
                     choices=["transcribe", "translate"], 
                     value="transcribe", 
-                    label="Task"
+                    label="Task (Translate = Always to English)"
                 )
+                
                 prompt_input = gr.Textbox(
                     label="Initial Prompt", 
-                    value="以下是普通话的句子。",
-                    placeholder="Context hint"
+                    placeholder="Context hint (e.g., 'Translate to English' or '繁體中文')"
                 )
                 
                 submit_btn = gr.Button("Submit", variant="primary")
             
             with gr.Column():
-                output_text = gr.Textbox(label="Result", lines=12, show_copy_button=True)
+                output_text = gr.Textbox(label="Result", lines=15, show_copy_button=True)
 
-        # Logic
         submit_btn.click(
             fn=process_audio, 
-            inputs=[audio_input, url_input, language_input, task_input, prompt_input], 
+            inputs=[audio_input, url_input, model_input, language_input, task_input, prompt_input], 
             outputs=output_text
         )
 
