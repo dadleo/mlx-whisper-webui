@@ -13,6 +13,7 @@ This fork is customized to support Video URLs, Model Switching, and UI fixes.
     -   Added **Task Selector** (Transcribe vs Translate).
     -   Added **Initial Prompt** input.
 4.  **SRT Generation:**
+    -   Added **SRT Generation & Download**.
 ---
 *(Original README follows below)*
 ---
