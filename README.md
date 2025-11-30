@@ -9,7 +9,7 @@ This fork is customized to support Video URLs, Model Switching, and UI fixes.
     -   Added dropdown to switch between `whisper-large-v3-turbo` (Fast), `whisper-large-v3` (High Quality), and `whisper-medium` (Balanced).
     -   *Why?* The Turbo model sometimes refuses to translate; switching to Medium/Large fixes this.
 3.  **UI Improvements:**
-    -   Added **Language Dropdown** (Forces `zh` to fix hallucinations).
+    -   Added **Language Dropdown** (ie. Forces `zh` to fix hallucinations).
     -   Added **Task Selector** (Transcribe vs Translate).
     -   Added **Initial Prompt** input.
 
