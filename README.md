@@ -42,7 +42,7 @@ uv run main.py
 
 Open http://127.0.0.1:7860 with your browser and you can view the app.
 
-![screenshot](.assets/screenshot-1.png)
+![screenshot](assets/screenshot-1.png)
 
 ## Reference
 
