@@ -31,22 +31,22 @@ def download_audio(url):
         raise gr.Error(f"Download failed: {str(e)}")
 
 def process_audio(audio_file, url_input, model_id, language, task, initial_prompt):
-    # 1. Determine Input Source
     target_file = None
-    if audio_file is not None:
-        target_file = audio_file
-    elif url_input and url_input.strip() != "":
+    
+    # --- LOGIC FIX: Check URL first, then File ---
+    if url_input and url_input.strip() != "":
         target_file = download_audio(url_input)
+    elif audio_file is not None:
+        target_file = audio_file
     else:
         return "Please upload a file OR paste a URL."
 
-    # 2. Handle 'Auto' Language
+    # Handle 'Auto' Language
     lang_param = None if language == "Auto" else language
 
     print(f"Processing... Model: {model_id} | Lang: {lang_param} | Task: {task}")
 
     try:
-        # 3. Run Transcription
         result = mlx_whisper.transcribe(
             target_file,
             path_or_hf_repo=model_id,
@@ -55,7 +55,7 @@ def process_audio(audio_file, url_input, model_id, language, task, initial_promp
             initial_prompt=initial_prompt
         )
         
-        # 4. Cleanup downloads
+        # Cleanup downloads
         if url_input and target_file and "downloads/" in target_file:
             if os.path.exists(target_file):
                 os.remove(target_file)
@@ -66,52 +66,70 @@ def process_audio(audio_file, url_input, model_id, language, task, initial_promp
 
 def build_interface():
     with gr.Blocks(title="MLX Whisper WebUI") as demo:
-        gr.Markdown("# MLX Whisper (Advanced)")
-        gr.Markdown("Supports Video URLs and Multiple Models.")
+        gr.Markdown("# 🍎 MLX Whisper WebUI")
         
+        with gr.Accordion("📖 Usage Guide & Tips (Click to Expand)", open=False):
+            gr.Markdown("""
+            ### ⚡️ Quick Cheat Sheet
+            | Goal | Recommended Settings |
+            | :--- | :--- |
+            | **Transcribe Chinese** | **Model:** Turbo / **Lang:** `zh` / **Task:** Transcribe |
+            | **Translate to English** | **Model:** Medium or Large *(Turbo often fails)* / **Lang:** `zh` / **Task:** Translate |
+            | **Force Traditional** | **Prompt:** `以下是繁體中文。` |
+            
+            **⚠️ Note:** "Translate" task always outputs **English** text.
+            """)
+
         with gr.Row():
             with gr.Column():
-                # Tabs
-                with gr.Tab("Upload File"):
+                # --- UI FIX: Assign variable names to tabs ---
+                with gr.Tab("Upload File") as tab_file:
                     audio_input = gr.Audio(type="filepath", label="Upload Audio/Video")
-                with gr.Tab("Paste URL"):
-                    url_input = gr.Textbox(label="Video URL", placeholder="YouTube, TikTok, X...")
+                
+                with gr.Tab("Paste URL") as tab_url:
+                    url_input = gr.Textbox(label="Video URL", placeholder="YouTube, TikTok, X (Twitter)...")
 
-                # --- CORRECTED MODEL NAMES HERE ---
+                # Model Selection
                 model_input = gr.Dropdown(
                     choices=[
                         "mlx-community/whisper-large-v3-turbo", 
-                        "mlx-community/whisper-large-v3-mlx",   # Fixed
-                        "mlx-community/whisper-medium-mlx",     # Fixed
-                        "mlx-community/whisper-base-mlx"        # Fixed
+                        "mlx-community/whisper-large-v3-mlx",   
+                        "mlx-community/whisper-medium-mlx",     
+                        "mlx-community/whisper-base-mlx"        
                     ],
                     value="mlx-community/whisper-large-v3-turbo",
-                    label="Model Selection (Try 'Medium' if Translate fails)"
+                    label="Model Selection (Use 'Medium' or 'Large' for best Translation)"
                 )
 
-                # Language Controls
+                # Settings
                 language_input = gr.Dropdown(
                     choices=["Auto", "zh", "en", "ja", "ko", "es", "fr", "de"], 
                     value="zh", 
                     label="Source Language (Force 'zh' for Chinese)"
                 )
                 
-                # Task Controls
                 task_input = gr.Radio(
                     choices=["transcribe", "translate"], 
                     value="transcribe", 
-                    label="Task (Translate = Always to English)"
+                    label="Task"
                 )
                 
                 prompt_input = gr.Textbox(
                     label="Initial Prompt", 
-                    placeholder="Context hint (e.g., 'Translate to English' or '繁體中文')"
+                    placeholder="Context hint (e.g., '以下是繁體中文。' or 'Translate to English')"
                 )
                 
                 submit_btn = gr.Button("Submit", variant="primary")
             
             with gr.Column():
-                output_text = gr.Textbox(label="Result", lines=15, show_copy_button=True)
+                output_text = gr.Textbox(label="Transcription Result", lines=20, show_copy_button=True)
+
+        # --- UI EVENTS: Clear the other input when switching tabs ---
+        # 1. When clicking File tab -> Clear URL
+        tab_file.select(fn=lambda: None, outputs=url_input)
+        
+        # 2. When clicking URL tab -> Clear File
+        tab_url.select(fn=lambda: None, outputs=audio_input)
 
         submit_btn.click(
             fn=process_audio, 
