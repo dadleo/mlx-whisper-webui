@@ -1,52 +1,64 @@
-"""STT (Speach-to-Text) Web UI with mlx-whisper"""
-
-from functools import partial, wraps
-
 import gradio as gr
 import mlx_whisper
 
+# Use the same model as the original
 HF_REPO = "mlx-community/whisper-turbo"
-LANGUAGE = "ja"
 
-
-def main():
-    iface = build_interface(hf_repo=HF_REPO, language=LANGUAGE)
-    iface.launch()
-
-
-def build_interface(hf_repo: str, language: str):
-    transcribe_ = partial(transcribe, hf_repo=hf_repo, language=language)
-    iface = gr.Interface(
-        fn=for_gradio(transcribe_),
-        inputs=gr.Audio(type="filepath"),
-        outputs="text",
-    )
-
-    return iface
-
-
-def for_gradio(f):
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        try:
-            return f(*args, **kwds)
-        except Exception as err:
-            raise gr.Error(str(err)) from err
-
-    return wrapper
-
-
-def transcribe(audio: str | None, hf_repo: str, language: str) -> str | None:
+def transcribe(audio, language, task, initial_prompt):
     if audio is None:
         return None
+    
+    print(f"Processing... Language: {language}, Task: {task}")
 
-    result = mlx_whisper.transcribe(
-        audio,
-        path_or_hf_repo=hf_repo,
-        language=language,
+    # If "Auto" is selected, pass None. Otherwise pass the code (e.g., "zh")
+    target_lang = None if language == "Auto" else language
+
+    try:
+        result = mlx_whisper.transcribe(
+            audio,
+            path_or_hf_repo=HF_REPO,
+            language=target_lang,
+            task=task,
+            initial_prompt=initial_prompt
+        )
+        return result["text"]
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# Build the Interface with the new controls
+def build_interface():
+    iface = gr.Interface(
+        fn=transcribe,
+        inputs=[
+            gr.Audio(type="filepath", label="Audio"),
+            
+            # 1. Force Language (Fixes Chinese->Japanese issue)
+            gr.Dropdown(
+                choices=["Auto", "zh", "en", "ja", "ko", "es", "fr", "de"], 
+                value="zh", 
+                label="Language (Select 'zh' for Chinese)"
+            ),
+            
+            # 2. Select Task
+            gr.Radio(
+                choices=["transcribe", "translate"], 
+                value="transcribe", 
+                label="Task"
+            ),
+            
+            # 3. Optional Prompt to help the AI
+            gr.Textbox(
+                label="Initial Prompt", 
+                value="以下是普通话的句子。",
+                placeholder="Hint for the AI (e.g., This is Chinese)"
+            )
+        ],
+        outputs="text",
+        title="MLX Whisper WebUI (Fixed)",
+        description="Select 'zh' in the dropdown to stop Japanese hallucinations."
     )
-    return result["text"]
-
+    return iface
 
 if __name__ == "__main__":
-    main()
+    demo = build_interface()
+    demo.launch(server_name="0.0.0.0", server_port=7860)
