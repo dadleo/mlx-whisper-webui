@@ -1,3 +1,15 @@
+# ⚠️ Modified Fork
+
+This fork includes a modified `main.py` to fix hallucinations and add video support.
+
+**Changes made:**
+- **Added URL Support:** Integrated `yt-dlp` to download audio from YouTube/Video links.
+- **UI Update:** Added Tabs for "Upload File" vs "Paste URL".
+- **Controls:** Added Language Dropdown, Task Selector, and Initial Prompt.
+- **Dependencies:** Added `yt-dlp` to `pyproject.toml`.
+
+Original README follows below:
+---
 # `mlx-whisper` Web UI
 
 Fast STT (Speach-to-Text) Web UI with mlx-whisper. The model is Whisper Large-3-Turbo.
